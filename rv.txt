@@ -1,0 +1,30 @@
+Ansible Playbooks – Automated operational tasks, improving efficiency and reducing manual work.
+Ansible Semaphore – Implemented for streamlined playbook execution and workflow management.
+ServiceNow & Jira Integration – Developed API-based automation for ticketing and change management.
+Azure Function HTTP Endpoints – Designed to process webhooks, enabling real-time event-driven automation.
+These efforts have enhanced automation, efficiency, and system integration. Looking forward to further improvements.
+
+Custom PowerShell Reports – Developed tailored reports to meet specific operational and business needs.
+IIS Report – Automated IIS data collection for improved monitoring and troubleshooting.
+Docker Deploy Scripts – Created scripts to streamline and standardize container deployments.
+Azure VM Tagging in Bulk – Developed PowerShell scripts for efficient and consistent VM tagging.
+General PowerShell Reports – Delivered various reports to support diverse operational requirements.
+These contributions enhanced visibility, automation, and operational efficiency across multiple areas.
+
+
+On-Premises VMware Review & Cloud Migration – Assisted in evaluating VMware workloads to assess cloud migration feasibility. Provided insights on optimizing workloads and leveraging automation scripts to streamline the migration process.
+Automation Scripts for Cloud Transition – Developed scripts to automate provisioning, configuration, and management, reducing manual effort and improving scalability.
+Docker Transition Project – Led efforts in transitioning from VMs to containers, creating Docker deployment scripts and best practices for streamlined adoption.
+These initiatives have supported cloud readiness, improved efficiency, and accelerated our move to containerization.
+
+
+Google Cloud Exploration – Gained familiarity with Google Cloud management, the Google Cloud Console, and Google Cloud Shell.
+Limited Focus Due to Azure Priority – While I explored Google Cloud, the primary focus remained on Azure, given its dominance in our environment.
+Future Development – Plan to dedicate more time to deepening my knowledge of Google Cloud to expand multi-cloud expertise.
+This foundation in Google Cloud will support potential future integrations and cloud strategy diversification.
+
+Azure Functions Deep Dive – Focused on leveraging Azure Functions for automation and integrations.
+PowerShell Runtime HTTP Endpoint – Developed an Azure Function to receive and process JSON webhooks.
+Integration with Third-Party Tools – Enabled seamless data flow between ServiceNow, Jira, and GitHub Actions for automated processing.
+Enhanced Automation – Improved efficiency by automating data handling and workflow execution.
+These efforts have strengthened integration capabilities and streamlined automation across platforms.
