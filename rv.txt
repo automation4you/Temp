@@ -33,3 +33,9 @@ Ansible Playbook for RHEL8 – Intended to assist a team member but had limited 
 Linux Expertise Gap – Not a primary focus area, as my expertise lies elsewhere.
 Misaligned Goal – Originally set by a previous manager but not well-aligned with my skill set or priorities.
 Moving forward, I aim to focus on objectives that better align with my strengths and contribute more effectively to team goals.
+
+
+
+
+
+I have consistently applied my technical expertise to improve automation, integrations, and cloud transitions, aligning with enterprise goals. Collaboration has been a strong focus, though some tasks required independent work. I actively pursue personal development, prioritizing Azure while exploring Google Cloud. My efforts in automation and process optimization have enhanced efficiency and service delivery, keeping customer needs at the forefront.
