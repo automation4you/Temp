@@ -39,3 +39,7 @@ Moving forward, I aim to focus on objectives that better align with my strengths
 
 
 I have consistently applied my technical expertise to improve automation, integrations, and cloud transitions, aligning with enterprise goals. Collaboration has been a strong focus, though some tasks required independent work. I actively pursue personal development, prioritizing Azure while exploring Google Cloud. My efforts in automation and process optimization have enhanced efficiency and service delivery, keeping customer needs at the forefront.
+
+
+
+Over the review period, I’ve made significant contributions by automating processes, integrating third-party tools, and optimizing cloud transitions, with a focus on Azure. I developed key solutions such as Ansible playbooks, Azure Functions, and Docker deployment scripts, which streamlined workflows and improved efficiency. Although my original goal of assisting with RHEL8 playbooks was misaligned, I learned the importance of setting realistic goals based on skill set. Moving forward, I aim to deepen my expertise in multi-cloud environments and continue driving automation efforts to enhance operational efficiency and support the company’s long-term growth.
