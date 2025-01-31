@@ -28,3 +28,8 @@ PowerShell Runtime HTTP Endpoint – Developed an Azure Function to receive and 
 Integration with Third-Party Tools – Enabled seamless data flow between ServiceNow, Jira, and GitHub Actions for automated processing.
 Enhanced Automation – Improved efficiency by automating data handling and workflow execution.
 These efforts have strengthened integration capabilities and streamlined automation across platforms.
+
+Ansible Playbook for RHEL8 – Intended to assist a team member but had limited involvement as they had most requirements covered.
+Linux Expertise Gap – Not a primary focus area, as my expertise lies elsewhere.
+Misaligned Goal – Originally set by a previous manager but not well-aligned with my skill set or priorities.
+Moving forward, I aim to focus on objectives that better align with my strengths and contribute more effectively to team goals.
