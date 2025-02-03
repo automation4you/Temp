@@ -1,3 +1,24 @@
+# Login to Azure
+Connect-AzAccount
+
+# Import the CSV file
+$csvFilePath = "C:\path\to\vm_tags.csv"
+$vmTags = Import-Csv -Path $csvFilePath
+
+# Validate CSV structure
+if (-not ($vmTags -and $vmTags[0].PSObject.Properties.Name -contains "Computer Name" -and
+         $vmTags[0].PSObject.Properties.Name -contains "Subscription" -and 
+         $vmTags[0].PSObject.Properties.Name -contains "Backup Tag Name" -and 
+         $vmTags[0].PSObject.Properties.Name -contains "Backup Tag Value")) {
+    Write-Error "CSV file is missing required columns. Check: Computer Name, Subscription, Backup Tag Name, Backup Tag Value."
+    return
+}
+
+# Initialize success/failure tracking
+$successList = @()
+$failureList = @()
+
+# Loop through CSV entries
 foreach ($entry in $vmTags) {
     $vmName = $entry.'Computer Name'.Trim()
     $subscriptionId = $entry.Subscription.Trim()
@@ -5,7 +26,7 @@ foreach ($entry in $vmTags) {
     $value = $entry.'Backup Tag Value'.Trim()
 
     try {
-        # Try setting the Azure context
+        # Try setting the Azure context (fails if subscription is invalid)
         Set-AzContext -SubscriptionId $subscriptionId -ErrorAction Stop | Out-Null
     } catch {
         Write-Warning "Subscription '$subscriptionId' does not exist or you don't have access. Skipping VM '$vmName'."
@@ -14,7 +35,7 @@ foreach ($entry in $vmTags) {
     }
 
     try {
-        # Get VM
+        # Get the VM in the specified subscription
         $vm = Get-AzVM -Name $vmName -ErrorAction SilentlyContinue
 
         if ($null -eq $vm) {
@@ -43,3 +64,11 @@ foreach ($entry in $vmTags) {
         $failureList += $vmName
     }
 }
+
+# Summary Report
+Write-Host "`nSummary:" -ForegroundColor Cyan
+Write-Host "Successfully updated VMs:" -ForegroundColor Green
+$successList | ForEach-Object { Write-Host $_ }
+
+Write-Host "Failed to update VMs:" -ForegroundColor Red
+$failureList | ForEach-Object { Write-Warning $_ }
