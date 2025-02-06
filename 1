@@ -1,0 +1,152 @@
+# Load the IIS module
+Import-Module WebAdministration
+
+# Create arrays to store the connection strings and sites without them
+$connectionStringsList = @()
+$noConnectionStringsList = @()
+$ExportPath = "C:\temp"
+
+# Inform the user
+Write-Host "CSV export will always occur. You can choose whether to export an additional HTML report." -ForegroundColor Cyan
+
+# Prompt the user to decide whether to include User Id and Password in the output
+$includeCredentials = Read-Host "Do you want to include User Id and Password in the exported connection strings? (Yes/No)"
+$includeCredentials = $includeCredentials -match "^(Yes|Y)$"
+
+# Prompt the user to decide whether to export results as an HTML file
+$exportHtml = Read-Host "Do you want to export the results as an HTML file? (Yes/No)"
+$exportHtml = $exportHtml -match "^(Yes|Y)$"
+
+# Get all IIS websites
+$sites = Get-Website
+
+Write-Host "Processing IIS websites..." -ForegroundColor Cyan
+
+# Loop through each site
+foreach ($site in $sites) {
+    $siteName = $site.Name
+    Write-Host "Processing site: $siteName" -ForegroundColor Yellow
+
+    # Get the web.config path
+    $configPath = Join-Path $site.PhysicalPath "web.config"
+    
+    # Check if the web.config file exists
+    if (Test-Path $configPath) {
+        try {
+            Write-Host "Found web.config for site: $siteName" -ForegroundColor Green
+            
+            # Load the web.config file
+            $xml = [xml](Get-Content $configPath)
+            
+            # Retrieve connectionStrings section if it exists
+            $connectionStrings = $xml.configuration.connectionStrings.add
+            
+            if ($connectionStrings) {
+                Write-Host "Connection strings found for site: $siteName" -ForegroundColor Green
+                
+                # Store sites with connection strings
+                foreach ($conn in $connectionStrings) {
+                    $connectionString = $conn.connectionString
+                    $filteredConnectionString = ""
+
+                    # Extract Server and Database information
+                    if ($connectionString -match "Server=([^;]+);") {
+                        $filteredConnectionString += "Server=$($matches[1]);"
+                    }
+                    if ($connectionString -match "Database=([^;]+);") {
+                        $filteredConnectionString += "Database=$($matches[1]);"
+                    }
+
+                    # Optionally include User Id and Password
+                    if ($includeCredentials) {
+                        if ($connectionString -match "User Id=([^;]+);") {
+                            $filteredConnectionString += "User Id=$($matches[1]);"
+                        }
+                        if ($connectionString -match "Password=([^;]+);") {
+                            $filteredConnectionString += "Password=$($matches[1]);"
+                        }
+                    }
+
+                    $connectionStringsList += [PSCustomObject]@{
+                        SiteName = $siteName
+                        Name     = $conn.name
+                        ConnectionString = $filteredConnectionString
+                    }
+                }
+            } else {
+                Write-Host "No connection strings found in web.config for site: $siteName" -ForegroundColor Magenta
+                
+                # Add to the list of sites with no connection strings
+                $noConnectionStringsList += [PSCustomObject]@{
+                    SiteName = $siteName
+                    Message  = "No connection strings found in web.config"
+                }
+            }
+        }
+        catch {
+            Write-Host "Failed to read connection strings for site: $siteName" -ForegroundColor Red
+        }
+    } else {
+        Write-Host "No web.config found for site: $siteName" -ForegroundColor Magenta
+        
+        # Add to the list of sites with no web.config
+        $noConnectionStringsList += [PSCustomObject]@{
+            SiteName = $siteName
+            Message  = "web.config not found"
+        }
+    }
+}
+
+Write-Host "Processing complete! Exporting results..." -ForegroundColor Cyan
+
+# Export the connection strings to CSV
+$connectionStringsCsv = "$ExportPath\ConnectionStrings.csv"
+$connectionStringsList | Export-Csv -Path $connectionStringsCsv -NoTypeInformation
+
+# Export the list of sites with no connection strings to CSV
+$noConnectionStringsCsv = "$ExportPath\NoConnectionStrings.csv"
+$noConnectionStringsList | Export-Csv -Path $noConnectionStringsCsv -NoTypeInformation
+
+Write-Host "CSV export completed. Files saved to:" -ForegroundColor Green
+Write-Host $connectionStringsCsv -ForegroundColor Cyan
+Write-Host $noConnectionStringsCsv -ForegroundColor Cyan
+
+# Conditionally generate and export the HTML report
+if ($exportHtml) {
+    $htmlFile = "$ExportPath\IIS_ConnectionStrings_Report.html"
+    $connectionStringsHtml = $connectionStringsList | ConvertTo-Html -Fragment
+    $noConnectionStringsHtml = $noConnectionStringsList | ConvertTo-Html -Fragment
+
+    # Combine the HTML sections and save the file
+    $finalHtml = @"
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IIS Connection Strings Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f4f4f4; }
+        h1, h2 { color: #2c3e50; }
+        p { color: #34495e; }
+    </style>
+</head>
+<body>
+    <h1>IIS Connection Strings Report</h1>
+    <h2>Sites with Connection Strings</h2>
+    <p>Below is the list of sites with connection strings:</p>
+    $connectionStringsHtml
+    <h2>Sites Without Connection Strings</h2>
+    <p>Below is the list of sites without connection strings or missing web.config files:</p>
+    $noConnectionStringsHtml
+</body>
+</html>
+"@
+
+    Set-Content -Path $htmlFile -Value $finalHtml -Encoding UTF8
+
+    Write-Host "HTML report exported to $htmlFile" -ForegroundColor Green
+} else {
+    Write-Host "HTML export skipped based on user input." -ForegroundColor Yellow
+}
