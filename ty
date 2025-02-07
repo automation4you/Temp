@@ -1,27 +1,19 @@
-# Login to Azure
-Connect-AzAccount
-
 # Import the CSV file
-$csvFilePath = "C:\path\to\vm_tags.csv"
+$csvFilePath = "C:\temp\jma-testing\tag-test.csv"
 $vmTags = Import-Csv -Path $csvFilePath
-
 # Validate CSV structure
 $requiredColumns = @("Computer Name", "Subscription", "Tag Name1", "Tag Value1", "Tag Name2", "Tag Value2")
 if (-not ($vmTags -and $requiredColumns -in $vmTags[0].PSObject.Properties.Name)) {
     Write-Error "CSV file is missing required columns: $($requiredColumns -join ', ')"
     exit
 }
-
 # Track results
 $successList = @()
 $failureList = @()
-
 # Group by Subscription to minimize context switching
 $groupedBySubscription = $vmTags | Group-Object -Property Subscription
-
 foreach ($group in $groupedBySubscription) {
     $subscriptionId = $group.Name.Trim()
-
     try {
         # Switch to the subscription context
         Set-AzContext -SubscriptionId $subscriptionId -ErrorAction Stop | Out-Null
@@ -31,20 +23,16 @@ foreach ($group in $groupedBySubscription) {
         $failureList += $group.Group.'Computer Name'
         continue
     }
-
     foreach ($entry in $group.Group) {
         $vmName = $entry.'Computer Name'.Trim()
         $tag1Name = $entry.'Tag Name1'.Trim()
         $tag1Value = $entry.'Tag Value1'.Trim()
         $tag2Name = $entry.'Tag Name2'.Trim()
         $tag2Value = $entry.'Tag Value2'.Trim()
-
         Write-Host "Processing VM '$vmName' in subscription '$subscriptionId'..." -ForegroundColor Yellow
-
         try {
             $resourceId = $null  # Reset resourceId for each VM
             $vm = Get-AzVM -Name $vmName -ErrorAction SilentlyContinue
-
             if ($vm) {
                 Write-Host "Standalone VM '$vmName' found." -ForegroundColor Cyan
                 $resourceId = $vm.Id
@@ -56,21 +44,18 @@ foreach ($group in $groupedBySubscription) {
                     $resourceId = $vmss.Id
                 }
             }
-
             if (-not $resourceId) {
                 Write-Warning "VM '$vmName' not found as a standalone VM or VMSS in subscription '$subscriptionId'. Skipping."
                 $failureList += $vmName
                 continue
             }
-
             # Prepare tags
             $tag = @{}
             if ($tag1Name -and $tag1Value) { $tag[$tag1Name] = $tag1Value }
             if ($tag2Name -and $tag2Value) { $tag[$tag2Name] = $tag2Value }
-
             # Apply the tag
             if ($tag.Count -gt 0) {
-                Update-AzTag -ResourceId $resourceId -Tag $tag -Operation Merge
+                Update-AzTag -ResourceId $resourceId -Tag $tag -Operation Merge -whatif
                 Write-Host "Updated tags for '$vmName': $($tag.Keys -join ', ') = $($tag.Values -join ', ')" -ForegroundColor Green
                 $successList += $vmName
             } else {
@@ -82,13 +67,12 @@ foreach ($group in $groupedBySubscription) {
         }
     }
 }
-
 # Summary Report
 Write-Host "`nSummary:" -ForegroundColor Cyan
 Write-Host "Successfully updated VMs/VMSS:" -ForegroundColor Green
 if ($successList.Count -eq 0) { Write-Host "None" -ForegroundColor DarkGray } else { $successList | ForEach-Object { Write-Host $_ } }
-
 Write-Host "`nFailed VMs:" -ForegroundColor Red
 if ($failureList.Count -eq 0) { Write-Host "None" -ForegroundColor DarkGray } else { $failureList | ForEach-Object { Write-Warning $_ } }
-
-Write-Host "`nScript execution completed!" -ForegroundColor Blue
+Write-Host "`nScript execution completed!" -ForegroundColor Blue : CSV file is missing required columns: Computer Name, Subscription, Tag Name1, Tag Value1, Tag Name2, Tag Value2
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException
