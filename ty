@@ -1,95 +1,173 @@
-# Login to Azure
-Connect-AzAccount
+Add-Type -AssemblyName System.Windows.Forms
 
-# Import the CSV file
-$csvFilePath = "C:\temp\jma-testing\tag-test.csv"
-$vmTags = Import-Csv -Path $csvFilePath
-
-# Validate CSV file structure
-if (-not ($vmTags -and $vmTags[0].PSObject.Properties.Name -contains "Computer Name" -and
-         $vmTags[0].PSObject.Properties.Name -contains "Subscription" -and 
-         $vmTags[0].PSObject.Properties.Name -contains "Tag Name1" -and 
-         $vmTags[0].PSObject.Properties.Name -contains "Tag Value1" -and 
-         $vmTags[0].PSObject.Properties.Name -contains "Tag Name2" -and 
-         $vmTags[0].PSObject.Properties.Name -contains "Tag Value2")) {
-    Write-Error "CSV file is missing required columns: Computer Name, Subscription, Tag Name1, Tag Value1, Tag Name2, or Tag Value2."
-    return
+# Function to display a message with the current step
+function Show-Progress {
+    param (
+        [string]$message
+    )
+    Write-Host "`n### $message ###" -ForegroundColor Cyan
 }
 
-# Track results
-$successList = @()
-$failureList = @()
+# Prompt the user for website information
+Show-Progress "Gathering information for the website"
 
-# Group by Subscription to minimize context switching
-$groupedBySubscription = $vmTags | Group-Object -Property Subscription
+# Get website name
+$websiteName = Read-Host "Enter the name for the website"
 
-foreach ($group in $groupedBySubscription) {
-    $subscriptionId = $group.Name.Trim()
-    try {
-        # Switch to the subscription context
-        Set-AzContext -SubscriptionId $subscriptionId -ErrorAction Stop | Out-Null
-        Write-Host "Switched to subscription '$subscriptionId'" -ForegroundColor Green
-    } catch {
-        Write-Warning "Invalid subscription: '$subscriptionId'. Skipping its VMs."
-        $failureList += $group.Group.'Computer Name'
-        continue
+# Get website port
+$websitePort = Read-Host "Enter the port for the website (e.g., 8081)"
+
+# Ask the user if they want to select a folder or individual files
+$choice = Read-Host "Do you want to select a folder (F) or individual files (I)? Enter F or I"
+
+# Prepare the build context
+$buildContext = "C:\Temp\$websiteName-build-context"
+if (-not (Test-Path $buildContext)) {
+    New-Item -ItemType Directory -Path $buildContext | Out-Null
+} else {
+    Remove-Item -Path "$buildContext\*" -Recurse -Force
+}
+
+# Initialize an empty array for selected items
+$selectedItems = @()
+
+# Folder Picker Logic
+if ($choice -eq "F") {
+    Show-Progress "Select the folder containing website content"
+    $folderBrowserDialog = New-Object System.Windows.Forms.FolderBrowserDialog
+    $folderBrowserDialog.Description = "Select the website content folder"
+    $folderBrowserDialog.ShowNewFolderButton = $true
+
+    $null = $folderBrowserDialog.ShowDialog()
+    $selectedFolder = $folderBrowserDialog.SelectedPath
+
+    if (-not $selectedFolder -or !(Test-Path $selectedFolder)) {
+        Write-Host "No valid folder selected. Exiting script." -ForegroundColor Red
+        exit 1
     }
 
-    foreach ($entry in $group.Group) {
-        $vmName = $entry.'Computer Name'.Trim()
-        $tag1Name = $entry.'Tag Name1'.Trim()
-        $tag1Value = $entry.'Tag Value1'.Trim()
-        $tag2Name = $entry.'Tag Name2'.Trim()
-        $tag2Value = $entry.'Tag Value2'.Trim()
+    # Copy all contents of the folder to the build context
+    Show-Progress "Copying folder contents to build context"
+    Copy-Item -Path "$selectedFolder\*" -Destination $buildContext -Recurse -Force
+    $selectedItems += Get-ChildItem -Path $selectedFolder -Recurse
+} elseif ($choice -eq "I") {
+    # File Picker Logic
+    Show-Progress "Select the website content files"
+    $openFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+    $openFileDialog.Title = "Select the website content files"
+    $openFileDialog.Filter = "All Files (*.*)|*.*"
+    $openFileDialog.Multiselect = $true
 
-        Write-Host "Processing VM '$vmName' in subscription '$subscriptionId'..." -ForegroundColor Yellow
+    $null = $openFileDialog.ShowDialog()
+    $selectedFiles = $openFileDialog.FileNames
 
-        try {
-            $resourceId = $null  # Reset resourceId for each VM
-            $vm = Get-AzVM -Name $vmName -ErrorAction SilentlyContinue
+    if (-not $selectedFiles -or $selectedFiles.Count -eq 0) {
+        Write-Host "No files selected. Exiting script." -ForegroundColor Red
+        exit 1
+    }
 
-            if ($vm) {
-                Write-Host "Standalone VM '$vmName' found." -ForegroundColor Cyan
-                $resourceId = $vm.Id
-            } else {
-                # If not found as a VM, check if it's a Scale Set
-                $vmss = Get-AzVmss -ResourceGroupName "*" -VMScaleSetName $vmName -ErrorAction SilentlyContinue
-                if ($vmss) {
-                    Write-Host "VMSS '$vmName' found. Tagging the scale set instead." -ForegroundColor Cyan
-                    $resourceId = $vmss.Id
-                }
-            }
-
-            if (-not $resourceId) {
-                Write-Warning "VM '$vmName' not found as a standalone VM or VMSS in subscription '$subscriptionId'. Skipping."
-                $failureList += $vmName
-                continue
-            }
-
-            # Prepare tags
-            $tag = @{}
-            if ($tag1Name -and $tag1Value) { $tag[$tag1Name] = $tag1Value }
-            if ($tag2Name -and $tag2Value) { $tag[$tag2Name] = $tag2Value }
-
-            # Apply the tag
-            if ($tag.Count -gt 0) {
-                Update-AzTag -ResourceId $resourceId -Tag $tag -Operation Merge -WhatIf
-                Write-Host "Added/Updated tags for '$vmName': $($tag.Keys -join ', ') = $($tag.Values -join ', ')" -ForegroundColor Green
-                $successList += $vmName
-            } else {
-                Write-Warning "No valid tags found for '$vmName'. Skipping update."
-            }
-        } catch {
-            Write-Error "Failed to update tags for VM '$vmName': $($_.Exception.Message)"
-            $failureList += $vmName
-        }
+    # Copy selected files directly into the build context
+    Show-Progress "Copying selected files to build context"
+    foreach ($file in $selectedFiles) {
+        $destinationFile = Join-Path $buildContext (Split-Path $file -Leaf)
+        Copy-Item -Path $file -Destination $destinationFile -Force
+        $selectedItems += $file
     }
 }
 
-# Summary Report
-Write-Host "`nSummary:" -ForegroundColor Cyan
-Write-Host "Successfully updated VMs/VMSS:" -ForegroundColor Green
-if ($successList.Count -eq 0) { Write-Host "None" -ForegroundColor DarkGray } else { $successList | ForEach-Object { Write-Host $_ } }
-Write-Host "`nFailed VMs:" -ForegroundColor Red
-if ($failureList.Count -eq 0) { Write-Host "None" -ForegroundColor DarkGray } else { $failureList | ForEach-Object { Write-Warning $_ } }
-Write-Host "`nScript execution completed!" -ForegroundColor Blue
+# Ensure something was selected
+if ($selectedItems.Count -eq 0) {
+    Write-Host "No content was selected. Exiting script." -ForegroundColor Red
+    exit 1
+}
+
+# Prepare the Dockerfile path
+$dockerfileFolder = "C:\Temp\DockerFiles\$websiteName-dockerfiles"
+if (-not (Test-Path $dockerfileFolder)) {
+    New-Item -ItemType Directory -Path $dockerfileFolder | Out-Null
+}
+
+$dockerfileName = "$dockerfileFolder\Dockerfile-$websiteName"
+
+# Create the Dockerfile dynamically
+Show-Progress "Creating Dockerfile for $websiteName"
+
+$dockerfileContent = @"
+# Use the existing IIS image as a base
+FROM mcr.microsoft.com/windows/servercore/iis
+
+# Set working directory to IIS web root
+WORKDIR /inetpub/wwwroot
+
+# Copy all files from the build context to IIS web root
+COPY . /inetpub/wwwroot/
+
+# Run PowerShell commands to configure IIS AppPool to run as NetworkService
+RUN powershell -Command \
+    Import-Module WebAdministration; \
+    Set-ItemProperty -Path 'IIS:\\AppPools\\DefaultAppPool' -Name processModel.identityType -Value 'NetworkService'
+
+# Expose the website's port
+EXPOSE $websitePort
+"@
+
+# Write the content to the Dockerfile
+$dockerfileContent | Out-File -FilePath $dockerfileName -Force -Encoding UTF8
+
+# Docker build command to be executed
+$buildCommand = "docker build -f $dockerfileName -t $websiteName-image $buildContext"
+
+# Write the Docker build command to a text file in the same folder as the Dockerfile
+$buildCommandFilePath = Join-Path $dockerfileFolder "docker-build-command.txt"
+$buildCommand | Out-File -FilePath $buildCommandFilePath -Force -Encoding UTF8
+
+# Run command for docker container
+$runCommand = "docker run -d -p ${websitePort}:80 --name $websiteName-container --security-opt 'credentialspec=file://$gmsaAccount' $websiteName-image"
+
+# Write the Docker run command to a text file in the same folder as the Dockerfile
+$runCommandFilePath = Join-Path $dockerfileFolder "docker-run-command.txt"
+$runCommand | Out-File -FilePath $runCommandFilePath -Force -Encoding UTF8
+
+# Display the docker build and run commands to the user
+Write-Host "`n### Running Docker build command: ###" -ForegroundColor Cyan
+Write-Host $buildCommand -ForegroundColor Yellow
+
+Write-Host "`n### Running Docker run command: ###" -ForegroundColor Cyan
+Write-Host $runCommand -ForegroundColor Yellow
+
+# Build the Docker image for the current website
+Show-Progress "Building Docker image for $websiteName"
+
+$buildOutput = docker build -f $dockerfileName -t $websiteName-image $buildContext 2>&1
+
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "Docker image for $websiteName has been successfully built." -ForegroundColor Green
+} else {
+    Write-Host "Failed to build Docker image. Details:" -ForegroundColor Red
+    Write-Host $buildOutput
+    exit 1
+}
+
+# Run the Docker container for the current website using gMSA
+Show-Progress "Running Docker container for $websiteName"
+
+$containerName = "$websiteName-container"
+$gmsaAccount = "ServiceA.json"  # Replace with the actual gMSA name
+
+# Ensure that $websitePort is a valid integer, e.g., 8080
+if (-not $websitePort -match '^\d+$') {
+    Write-Host "Invalid port number specified: $websitePort. Please provide a valid port." -ForegroundColor Red
+    exit 1
+}
+
+# Run the container with proper arguments
+$runResult = docker run -d -p "${websitePort}:80" --name $containerName --security-opt "credentialspec=file://$gmsaAccount" $websiteName-image
+
+# Check the result of the docker run command
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "Docker container for $websiteName is running on port $websitePort with gMSA authentication." -ForegroundColor Green
+} else {
+    Write-Host "Failed to run Docker container for $websiteName." -ForegroundColor Red
+    Write-Host "Error details: $runResult" -ForegroundColor Red
+    exit 1
+}
