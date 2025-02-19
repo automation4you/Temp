@@ -1,1 +1,39 @@
+# Provider
+provider_vsphere_host = "ordvcs001.corp.footlocker.net"             								#v-center deploying to
+
+# Infrastructure
+deploy_vsphere_datacenter = ""                               		#Datacenter being deployed to 
+deploy_vsphere_cluster = ""                            				#VmWare Cluster being deployed to
+deploy_vsphere_datastore = ""              							#Datastore vm being deployed to
+deploy_vsphere_folder = ""                             				#Folder to deploy the VM too
+deploy_vsphere_network = ""                							#Network label/Network port group vm going to use
+
+# Guest
+guest_template = ""                        							#Template you want to clone your vm from
+guest_vm_name = ""                                      			#Name of the server you are deploying 
+vsphere_vm_firmware = ""                             				#Firmware setting on the template                              
+guest_vcpu = ""                                        				#Number of Cores to assign the VM
+guest_memory = ""                                   				#Amount of memory in MB  (1024mb) per 1GB
+guest_ipv4_addr = ""                                    			#IP address that is being assigned to your vm
+guest_ipv4_netmask = ""                               				#Subnet mask for your network
+guest_ipv4_gateway = ""                     						#Network gateway for your vm    
+guest_dns_servers = ""                        						#DNS Servers for your vm domain control1
+guest_dns_servers2 = ""                     						#DNS Server for your vm donmain control2
+guest_dns_suffix = ""               								#DNS Search suffix
+vsphere_tag_env_category =""                 			            #Tag environment variable leave as environment
+vsphere_tag_env_name =""                         					#Environment tag value
+vsphere_tag_backups_category = ""                			        #Tag for backups leave as backups
+vsphere_tag_backups_name = ""      									#Tag for backups schedule
+vsphere_tag_application_category =""                 	            #Tag for application leave as application
+vsphere_tag_application_name =""                                	#Application being installed
+vsphere_tag_application-owner_category = ""      	                #Tag for backups leave as application-owner
+vsphere_tag_application-owner_name = ""                           	#Team that owns the application
+vsphere_tag_os_category = ""                                        #Tag for OS category
+vsphere_tag_os_name = ""                                            #Tag for OS version (windows or linux)
+nsx_os_tag = ""                                                     #NSX Tag for server OS
+nsx_env_tag = ""                                                    #NSX Tag for server enviorment
+nsx_app_tag = ""                                                    #NSX Tag for server application
+nsx_role_tag = ""                                                   #NSX Tag for server role
+approle_id = ""
+approle_secret = ""
 
