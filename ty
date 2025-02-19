@@ -1,5 +1,5 @@
 # Provider
-provider_vsphere_host = "ordvcs001.corp.footlocker.net"             								#v-center deploying to
+provider_vsphere_host = ""             #v-center deploying to
 
 # Infrastructure
 deploy_vsphere_datacenter = ""                               		#Datacenter being deployed to 
