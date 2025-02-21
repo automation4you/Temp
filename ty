@@ -1,11 +1,12 @@
 1. User submits the HTML form, which collects data for a Terraform tfvars file.
-2. JavaScript triggers: Upon submission, the form data is sent to an Azure function (run.ps1), which processes the payload and creates         the tfvars file.
+2. JavaScript triggers: Upon submission, the form data is sent to an Azure function (run.ps1), which processes the payload and creates the tfvars file.
 3. The Azure function sends the data to GitHub via an API call, triggering a GitHub Action.
 4. GitHub Action processes the data: it creates a new branch, generates the tfvars file, and opens a pull request for review.
 5. Once the pull request is merged, a Jenkins pipeline is automatically triggered.
 6. The Jenkins pipeline uses Terraform to deploy the server to vCenter on-premise.
 7. After deployment, post-automation tasks are executed:
     ◦ The server is joined to the domain.
+    ◦ add to AD group(s)
     ◦ It is moved to a specific OU.
     ◦ gpupdate is run to apply group policies.
-    ◦ Necessary applications are installed.
+    ◦ Necessary applications are installed. - phase 2
