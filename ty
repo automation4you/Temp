@@ -1,12 +1,64 @@
-1. User submits the HTML form, which collects data for a Terraform tfvars file.
-2. JavaScript triggers: Upon submission, the form data is sent to an Azure function (run.ps1), which processes the payload and creates the tfvars file.
-3. The Azure function sends the data to GitHub via an API call, triggering a GitHub Action.
-4. GitHub Action processes the data: it creates a new branch, generates the tfvars file, and opens a pull request for review.
-5. Once the pull request is merged, a Jenkins pipeline is automatically triggered.
-6. The Jenkins pipeline uses Terraform to deploy the server to vCenter on-premise.
-7. After deployment, post-automation tasks are executed:
-    ◦ The server is joined to the domain.
-    ◦ add to AD group(s)
-    ◦ It is moved to a specific OU.
-    ◦ gpupdate is run to apply group policies.
-    ◦ Necessary applications are installed. - phase 2
+name: Trigger Action from Azure Function
+
+on:
+  repository_dispatch:
+    types: [vsphere_vm_deployment]
+
+jobs:
+  create_branch_and_pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Git configuration
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "github-actions@github.com"
+          git config --global credential.helper store
+
+      - name: Generate Branch Name from GitHub Event Data
+        id: generate_branch_name
+        run: |
+          branchName="feature/vsphere-${{ github.event.client_payload.guest_vm_name }}"
+          echo "branch_name=$branchName" >> $GITHUB_ENV
+          echo "Generated branch name: ${{ env.branch_name }}"
+
+      - name: Extract Change Request
+        run: echo "CHANGE_REQUEST=${{ github.event.client_payload.change_request }}" >> $GITHUB_ENV
+
+      - name: Create new branch from main
+        run: |
+          git fetch origin
+          git checkout -b ${{ env.branch_name }} origin/main
+          echo "New branch '${{ env.branch_name }}' created from 'main'"
+
+      - name: Decode and create dynamic .tfvars file
+        run: |
+          tfvarsFileName="${{ github.event.client_payload.guest_vm_name }}.tfvars"
+          # Ensure the pending directory exists
+          mkdir -p pending
+          # Save the .tfvars file to the pending folder
+          echo "${{ github.event.client_payload.tfvars_content }}" | base64 --decode > pending/$tfvarsFileName
+          echo "Decoded tfvars content and saved to pending/$tfvarsFileName"
+
+      - name: Check if there are changes to commit
+        run: |
+          git diff --exit-code || echo "Changes detected"
+        id: check_changes
+
+      - name: Commit changes and push to new branch
+        if: steps.check_changes.outcome == 'success'
+        run: |
+          git add pending/${{ github.event.client_payload.guest_vm_name }}.tfvars
+          git commit -m "Add .tfvars file for VM configuration in pending folder"
+          git push --set-upstream https://x-access-token:${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}@github.com/automation4you/AzureFunctionTesting.git ${{ env.branch_name }}
+
+      - name: Create pull request
+        run: |
+          pr_title="Deployment Request - ${{ env.CHANGE_REQUEST }}"
+          echo "PR Title: $pr_title"
+          gh pr create --title "$pr_title" --body "Automated pull request to add VM configuration .tfvars file.\n\nChange Request: **${{ env.CHANGE_REQUEST }}**" --base main --head ${{ env.branch_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
