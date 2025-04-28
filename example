@@ -1,0 +1,4 @@
+SECRET="" \
+GITHUB_URL="" \
+GITHUB_TOKEN="" \
+docker-compose up -d --build
