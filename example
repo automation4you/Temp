@@ -1,14 +1,11 @@
 # Send POST request to GitHub
 try {
-    # Bypass SSL certificate validation (TEMPORARY FOR TESTING ONLY)
-    [Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-
+    Write-Host "Sending GitHub API request to $githubWebhookUrl with SkipCertificateCheck"
     $response = Invoke-RestMethod -Uri $githubWebhookUrl -Method Post -Headers @{
         "Authorization" = "Bearer $githubToken"
         "Content-Type" = "application/json"
-    } -Body $githubPayload
+    } -Body $githubPayload -SkipCertificateCheck -ErrorAction Stop
 
-    # Ensure we handle empty responses from GitHub API
     if (-not $response) {
         Write-Host "GitHub API returned no body, assuming success."
         $response = @{"status"="GitHub Dispatch Success"}
@@ -17,4 +14,6 @@ try {
     Write-Host "GitHub Dispatch Response: $($response | ConvertTo-Json -Depth 10)"
 } catch {
     Write-Host "Error calling GitHub API: $_"
+    Write-Host "Exception Details: $($_.Exception.Message)"
+    Write-Host "Stack Trace: $($_.Exception.StackTrace)"
 }
