@@ -1,44 +1,20 @@
-# PowerShell script to join a computer to a domain and verify the join
-# Exits with 0 for success, 1 for failure
-
-param (
-    [Parameter(Mandatory=$true)]
-    [string]$DomainName,
-    [Parameter(Mandatory=$true)]
-    [string]$Username,
-    [Parameter(Mandatory=$true)]
-    [string]$Password
-)
-
-# Function to log messages
-function Write-Log {
-    param ([string]$Message)
-    Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'): $Message"
-}
-
+# Send POST request to GitHub
 try {
-    Write-Log "Starting domain join process for domain: $DomainName"
+    # Bypass SSL certificate validation (TEMPORARY FOR TESTING ONLY)
+    [Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
 
-    # Convert password to secure string
-    $SecurePassword = ConvertTo-SecureString $Password -AsPlainText -Force
-    $Credential = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
+    $response = Invoke-RestMethod -Uri $githubWebhookUrl -Method Post -Headers @{
+        "Authorization" = "Bearer $githubToken"
+        "Content-Type" = "application/json"
+    } -Body $githubPayload
 
-    # Attempt to join the domain
-    Write-Log "Attempting to join the domain..."
-    Add-Computer -DomainName $DomainName -Credential $Credential -Force -ErrorAction Stop
-
-    # Verify domain join
-    Write-Log "Verifying domain join..."
-    $ComputerSystem = Get-WmiObject -Class Win32_ComputerSystem
-    if ($ComputerSystem.PartOfDomain -and $ComputerSystem.Domain -eq $DomainName) {
-        Write-Log "Successfully joined domain: $DomainName"
-        exit 0
-    } else {
-        Write-Log "Failed to verify domain join. Computer is not part of the expected domain."
-        exit 1
+    # Ensure we handle empty responses from GitHub API
+    if (-not $response) {
+        Write-Host "GitHub API returned no body, assuming success."
+        $response = @{"status"="GitHub Dispatch Success"}
     }
-}
-catch {
-    Write-Log "Error occurred: $($_.Exception.Message)"
-    exit 1
+
+    Write-Host "GitHub Dispatch Response: $($response | ConvertTo-Json -Depth 10)"
+} catch {
+    Write-Host "Error calling GitHub API: $_"
 }
