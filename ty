@@ -1,2 +1,63 @@
-nfo: Function.tfvars-parser.User[0]
-      INFORMATION: Error calling GitHub API: The remote certificate is invalid because of errors in the certificate chain: UntrustedRoot
+      INFORMATION: Sending GitHub API request to https://api.github.com/repos/FootLocker-INF/PlatformSystemDelivery-Terraform-Deployments/dispatches with SkipCertificateCheck
+ 
+info: Function.tfvars-parser.User[0]
+ 
+      INFORMATION: Error calling GitHub API: {"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/repos#create-a-repository-dispatch-event","status":"404"}
+ 
+info: Function.tfvars-parser.User[0]
+ 
+      INFORMATION: Exception Details: Response status code does not indicate success: 404 (Not Found).
+ 
+info: Function.tfvars-parser.User[0]
+ 
+      INFORMATION: Stack Trace:    at System.Management.Automation.MshCommandRuntime.ThrowTerminatingError(ErrorRecord errorRecord)
+ 
+info: Function.tfvars-parser.User[0]
+ 
+      INFORMATION: Returning Success Response: {
+ 
+        "Body": "{\"status\":\"success\",\"message\":\"GitHub dispatch triggered\"}",
+ 
+        "StatusCode": 200,
+ 
+        "Headers": {
+ 
+          "Content-Type": "application/json"
+ 
+
+ 
+}
+ 
+      }
+ 
+info: Function.tfvars-parser.User[0]
+ 
+      OUTPUT:
+ 
+info: Function.tfvars-parser.User[0]
+ 
+      OUTPUT: Name                           Value
+ 
+info: Function.tfvars-parser.User[0]
+ 
+      OUTPUT: ----                           -----
+ 
+info: Function.tfvars-parser.User[0]
+ 
+      OUTPUT: Body                           {"status":"success","message":"GitHub dispatch triggered"}
+ 
+info: Function.tfvars-parser.User[0]
+ 
+      OUTPUT: StatusCode                     200
+ 
+info: Function.tfvars-parser.User[0]
+ 
+      OUTPUT: Headers                        {Content-Type}
+ 
+info: Function.tfvars-parser.User[0]
+ 
+      OUTPUT:
+ 
+info: Function.tfvars-parser[2]
+ 
+      Executed 'Functions.tfvars-parser' (Succeeded, Id=c7044faf-78a7-4d3a-a62c-1f0727e563ac, Duration=1030ms)
