@@ -1,1 +1,3 @@
-curl -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/user/repos
+vpxd services fail to start check the certs did not see anything expired only error i came across so far is 
+2025-06-02T13:45:48.406Z verbose vpxd[25049] [Originator@6876 sub=IO.Connection] Attempting connection; <resolver p:0x00007ff45025b600, 'ordvcs001.corp.footlocker.net:443', next:<TCP '127.0.0.1 : 443'>>, last e: 0(Success)
+2025-06-02T13:45:48.412Z warning vpxd[24949] [Originator@6876 sub=vmomi.soapStub[1]] SOAP request returned HTTP failure; <SSL(<io_obj p:0x00007ff4a00025b8, h:48, <TCP '127.0.0.1 : 40350'>, <TCP '127.0.0.1 : 443'>>), /sso-adminserver/sdk/vsphere.local>, method: retrieveServiceContent; code: 503(Service Unavailable)
