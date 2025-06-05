@@ -1,3 +1,134 @@
-vpxd services fail to start check the certs did not see anything expired only error i came across so far is 
-2025-06-02T13:45:48.406Z verbose vpxd[25049] [Originator@6876 sub=IO.Connection] Attempting connection; <resolver p:0x00007ff45025b600, 'ordvcs001.corp.footlocker.net:443', next:<TCP '127.0.0.1 : 443'>>, last e: 0(Success)
-2025-06-02T13:45:48.412Z warning vpxd[24949] [Originator@6876 sub=vmomi.soapStub[1]] SOAP request returned HTTP failure; <SSL(<io_obj p:0x00007ff4a00025b8, h:48, <TCP '127.0.0.1 : 40350'>, <TCP '127.0.0.1 : 443'>>), /sso-adminserver/sdk/vsphere.local>, method: retrieveServiceContent; code: 503(Service Unavailable)
+name: Orchestrate Sub-Actions
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'Pending/*.tfvars' # Trigger on changes to .tfvars files in Pending
+
+jobs:
+  extract_server_name:
+    runs-on: ubuntu-latest
+    outputs:
+      server_name: ${{ steps.extract.outputs.server_name }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Extract Server Name from tfvars File
+        id: extract
+        run: |
+          # Get the file name from the changed files in Pending
+          FILE=$(git diff --name-only HEAD^ HEAD | grep 'Pending/.*\.tfvars' | head -n 1)
+          if [ -z "$FILE" ]; then
+            echo "No .tfvars file found in Pending"
+            exit 1
+          fi
+          # Extract server name from file name (e.g., myserver.tfvars -> myserver)
+          SERVER_NAME=$(basename "$FILE" .tfvars)
+          echo "server_name=$SERVER_NAME" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  join_domain:
+    runs-on: ubuntu-latest
+    needs: extract_server_name
+    steps:
+      - name: Trigger Join Domain Workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'join-domain.yml',
+              ref: 'master',
+              inputs: {
+                server_name: '${{ needs.extract_server_name.outputs.server_name }}'
+              }
+            });
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for Join Domain Completion
+        uses: fountainhead/action-wait-for-check@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.sha }}
+          checkName: 'join-domain'
+          timeoutSeconds: 600
+          intervalSeconds: 30
+
+  move_ou:
+    runs-on: ubuntu-latest
+    needs: [extract_server_name, join_domain]
+    if: needs.join_domain.result == 'success'
+    steps:
+      - name: Trigger Move OU Workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'move-ou.yml',
+              ref: 'master',
+              inputs: {
+                server_name: '${{ needs.extract_server_name.outputs.server_name }}'
+              }
+            });
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for Move OU Completion
+        uses: fountainhead/action-wait-for-check@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.sha }}
+          checkName: 'move-ou'
+          timeoutSeconds: 600
+          intervalSeconds: 30
+
+  install_software:
+    runs-on: ubuntu-latest
+    needs: [extract_server_name, move_ou]
+    if: needs.move_ou.result == 'success'
+    steps:
+      - name: Trigger Install Software Workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'install-software.yml',
+              ref: 'master',
+              inputs: {
+                server_name: '${{ needs.extract_server_name.outputs.server_name }}'
+              }
+            });
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for Install Software Completion
+        uses: fountainhead/action-wait-for-check@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.sha }}
+          checkName: 'install-software'
+          timeoutSeconds: 600
+          intervalSeconds: 30
+
+  final_step:
+    runs-on: ubuntu-latest
+    needs: [extract_server_name, join_domain, move_ou, install_software]
+    if: always()
+    steps:
+      - name: Summarize Results
+        run: |
+          echo "Server Name: ${{ needs.extract_server_name.outputs.server_name }}"
+          echo "Join Domain Status: ${{ needs.join_domain.result }}"
+          echo "Move OU Status: ${{ needs.move_ou.result || 'skipped' }}"
+          echo "Install Software Status: ${{ needs.install_software.result || 'skipped' }}"
