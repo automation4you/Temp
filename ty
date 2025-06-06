@@ -1,134 +1,55 @@
-name: Orchestrate Sub-Actions
-on:
-  push:
-    branches:
-      - master
-    paths:
-      - 'Pending/*.tfvars' # Trigger on changes to .tfvars files in Pending
+Goal Title: Convert Jenkins VM Deploy Pipeline to GitHub Actions Workflow
 
-jobs:
-  extract_server_name:
-    runs-on: ubuntu-latest
-    outputs:
-      server_name: ${{ steps.extract.outputs.server_name }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
+Desired Goal: Successfully convert the existing Jenkins VM deploy pipeline to a GitHub Actions workflow while utilizing the same Terraform code to ensure consistency in infrastructure provisioning.
 
-      - name: Extract Server Name from tfvars File
-        id: extract
-        run: |
-          # Get the file name from the changed files in Pending
-          FILE=$(git diff --name-only HEAD^ HEAD | grep 'Pending/.*\.tfvars' | head -n 1)
-          if [ -z "$FILE" ]; then
-            echo "No .tfvars file found in Pending"
-            exit 1
-          fi
-          # Extract server name from file name (e.g., myserver.tfvars -> myserver)
-          SERVER_NAME=$(basename "$FILE" .tfvars)
-          echo "server_name=$SERVER_NAME" >> $GITHUB_OUTPUT
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+Specific Actions:
 
-  join_domain:
-    runs-on: ubuntu-latest
-    needs: extract_server_name
-    steps:
-      - name: Trigger Join Domain Workflow
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'join-domain.yml',
-              ref: 'master',
-              inputs: {
-                server_name: '${{ needs.extract_server_name.outputs.server_name }}'
-              }
-            });
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Wait for Join Domain Completion
-        uses: fountainhead/action-wait-for-check@v2.0.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ github.sha }}
-          checkName: 'join-domain'
-          timeoutSeconds: 600
-          intervalSeconds: 30
 
-  move_ou:
-    runs-on: ubuntu-latest
-    needs: [extract_server_name, join_domain]
-    if: needs.join_domain.result == 'success'
-    steps:
-      - name: Trigger Move OU Workflow
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'move-ou.yml',
-              ref: 'master',
-              inputs: {
-                server_name: '${{ needs.extract_server_name.outputs.server_name }}'
-              }
-            });
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Wait for Move OU Completion
-        uses: fountainhead/action-wait-for-check@v2.0.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ github.sha }}
-          checkName: 'move-ou'
-          timeoutSeconds: 600
-          intervalSeconds: 30
 
-  install_software:
-    runs-on: ubuntu-latest
-    needs: [extract_server_name, move_ou]
-    if: needs.move_ou.result == 'success'
-    steps:
-      - name: Trigger Install Software Workflow
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'install-software.yml',
-              ref: 'master',
-              inputs: {
-                server_name: '${{ needs.extract_server_name.outputs.server_name }}'
-              }
-            });
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+Analyze the current Jenkins VM deploy pipeline to identify all stages, dependencies, and configurations, including Terraform code integration.
 
-      - name: Wait for Install Software Completion
-        uses: fountainhead/action-wait-for-check@v2.0.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ github.sha }}
-          checkName: 'install-software'
-          timeoutSeconds: 600
-          intervalSeconds: 30
 
-  final_step:
-    runs-on: ubuntu-latest
-    needs: [extract_server_name, join_domain, move_ou, install_software]
-    if: always()
-    steps:
-      - name: Summarize Results
-        run: |
-          echo "Server Name: ${{ needs.extract_server_name.outputs.server_name }}"
-          echo "Join Domain Status: ${{ needs.join_domain.result }}"
-          echo "Move OU Status: ${{ needs.move_ou.result || 'skipped' }}"
-          echo "Install Software Status: ${{ needs.install_software.result || 'skipped' }}"
+
+Design a GitHub Actions workflow that replicates the functionality of the Jenkins pipeline, mapping each stage to equivalent GitHub Actions steps.
+
+
+
+Configure the GitHub Actions workflow to integrate with the existing Terraform code, ensuring no modifications are made to the Terraform scripts unless necessary for compatibility.
+
+
+
+Test the GitHub Actions workflow in a staging environment to validate that it deploys infrastructure correctly and matches the outcomes of the Jenkins pipeline.
+
+
+
+Document the new workflow, including setup instructions, environment variables, and any differences from the Jenkins pipeline, to ensure team accessibility and maintainability.
+
+
+
+Collaborate with the team to review the workflow, incorporate feedback, and perform a final deployment in the production environment.
+
+
+
+Decommission the Jenkins pipeline after successful validation of the GitHub Actions workflow and stakeholder approval.
+
+Measure of Success: The performance goal will be considered successful when the GitHub Actions workflow is fully implemented, consistently deploys infrastructure using the existing Terraform code, and achieves the same functionality as the Jenkins pipeline. Success will be measured by:
+
+
+
+
+
+100% feature parity between the Jenkins pipeline and the GitHub Actions workflow, verified through testing in staging and production environments.
+
+
+
+Zero deployment failures in the production environment for at least two consecutive deployment cycles post-conversion.
+
+
+
+Completion of comprehensive documentation and team training on the new workflow by the project deadline.
+
+
+
+Approval from all relevant stakeholders confirming the successful transition and decommissioning of the Jenkins pipeline.
