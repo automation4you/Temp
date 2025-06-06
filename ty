@@ -1,6 +1,6 @@
-Goal Title: Convert Jenkins VM Deploy Pipeline to GitHub Actions Workflow
+Goal Title: Upskill in Azure and Container Technologies
 
-Desired Goal: Successfully convert the existing Jenkins VM deploy pipeline to a GitHub Actions workflow while utilizing the same Terraform code to ensure consistency in infrastructure provisioning.
+Desired Goal: Develop proficiency in Azure App Configuration, Azure Functions, and container technologies to support cloud-native application development.
 
 Specific Actions:
 
@@ -8,48 +8,36 @@ Specific Actions:
 
 
 
-Analyze the current Jenkins VM deploy pipeline to identify all stages, dependencies, and configurations, including Terraform code integration.
+Complete training or certification in Azure App Configuration, Azure Functions, and container technologies (e.g., Docker, Kubernetes).
 
 
 
-Design a GitHub Actions workflow that replicates the functionality of the Jenkins pipeline, mapping each stage to equivalent GitHub Actions steps.
+Apply skills by building a project integrating these technologies on Azure.
 
 
 
-Configure the GitHub Actions workflow to integrate with the existing Terraform code, ensuring no modifications are made to the Terraform scripts unless necessary for compatibility.
+Share knowledge with the team through documentation or a presentation.
 
 
 
-Test the GitHub Actions workflow in a staging environment to validate that it deploys infrastructure correctly and matches the outcomes of the Jenkins pipeline.
+Stay informed on advancements in these technologies through regular review of relevant resources.
 
-
-
-Document the new workflow, including setup instructions, environment variables, and any differences from the Jenkins pipeline, to ensure team accessibility and maintainability.
-
-
-
-Collaborate with the team to review the workflow, incorporate feedback, and perform a final deployment in the production environment.
-
-
-
-Decommission the Jenkins pipeline after successful validation of the GitHub Actions workflow and stakeholder approval.
-
-Measure of Success: The performance goal will be considered successful when the GitHub Actions workflow is fully implemented, consistently deploys infrastructure using the existing Terraform code, and achieves the same functionality as the Jenkins pipeline. Success will be measured by:
+Measure of Success: The goal will be achieved when:
 
 
 
 
 
-100% feature parity between the Jenkins pipeline and the GitHub Actions workflow, verified through testing in staging and production environments.
+Training or certification in the specified technologies is completed.
 
 
 
-Zero deployment failures in the production environment for at least two consecutive deployment cycles post-conversion.
+A functional project integrating Azure ACA, Azure Functions, and containers is deployed.
 
 
 
-Completion of comprehensive documentation and team training on the new workflow by the project deadline.
+Knowledge is shared with the team, receiving positive feedback.
 
 
 
-Approval from all relevant stakeholders confirming the successful transition and decommissioning of the Jenkins pipeline.
+Ongoing engagement with relevant technical resources is demonstrated.
