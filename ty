@@ -1,43 +1,15 @@
-Goal Title: Upskill in Azure and Container Technologies
+📌 Desired Goal:
+Automate repetitive administrative tasks that occur after system deployments to improve efficiency, reduce human error, and ensure standardized post-deployment operations.
 
-Desired Goal: Develop proficiency in Azure App Configuration, Azure Functions, and container technologies to support cloud-native application development.
+🔧 Specific Actions (How Will It Be Achieved):
+Utilize a centralized GitHub Actions master workflow to orchestrate a series of sub-actions. Each sub-action will run targeted PowerShell scripts on GitHub self-hosted runners to execute specific post-deployment tasks such as domain join, OU placement, configuration enforcement, and application installs. This ensures consistency across environments and minimizes manual intervention.
 
-Specific Actions:
+📈 Measure of Success:
 
+90%+ reduction in manual administrative effort per deployment
 
+Post-deployment tasks completed in <5 minutes (previously 30+ mins)
 
+Zero critical errors or omissions in automated post-deployment steps over 30 consecutive deployments
 
-
-Complete training or certification in Azure App Configuration, Azure Functions, and container technologies (e.g., Docker, Kubernetes).
-
-
-
-Apply skills by building a project integrating these technologies on Azure.
-
-
-
-Share knowledge with the team through documentation or a presentation.
-
-
-
-Stay informed on advancements in these technologies through regular review of relevant resources.
-
-Measure of Success: The goal will be achieved when:
-
-
-
-
-
-Training or certification in the specified technologies is completed.
-
-
-
-A functional project integrating Azure ACA, Azure Functions, and containers is deployed.
-
-
-
-Knowledge is shared with the team, receiving positive feedback.
-
-
-
-Ongoing engagement with relevant technical resources is demonstrated.
+Positive feedback from DevOps/Infrastructure team in quarterly workflow satisfaction survey
