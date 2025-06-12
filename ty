@@ -1,15 +1,55 @@
-📌 Desired Goal:
-Automate repetitive administrative tasks that occur after system deployments to improve efficiency, reduce human error, and ensure standardized post-deployment operations.
-
-🔧 Specific Actions (How Will It Be Achieved):
-Utilize a centralized GitHub Actions master workflow to orchestrate a series of sub-actions. Each sub-action will run targeted PowerShell scripts on GitHub self-hosted runners to execute specific post-deployment tasks such as domain join, OU placement, configuration enforcement, and application installs. This ensures consistency across environments and minimizes manual intervention.
-
-📈 Measure of Success:
-
-90%+ reduction in manual administrative effort per deployment
-
-Post-deployment tasks completed in <5 minutes (previously 30+ mins)
-
-Zero critical errors or omissions in automated post-deployment steps over 30 consecutive deployments
-
-Positive feedback from DevOps/Infrastructure team in quarterly workflow satisfaction survey
+apiVersion: 2022-10-01
+kind: containerapp
+metadata:
+  name: fl-tfvars-app
+  namespace: default
+location: eastus
+properties:
+  environmentId: /subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP>/providers/Microsoft.App/managedEnvironments/<ENVIRONMENT_NAME>
+  configuration:
+    ingress:
+      external: true
+      targetPort: 80
+      transport: auto
+    secrets:
+      - name: registry-password
+        value: <REGISTRY_PASSWORD>
+      - name: secret
+        value: <SECRET_VALUE>
+      - name: github-url
+        value: <GITHUB_URL_VALUE>
+      - name: github-token
+        value: <GITHUB_TOKEN_VALUE>
+    registries:
+      - server: <ACR_NAME>.azurecr.io
+        username: <REGISTRY_USERNAME>
+        passwordSecretRef: registry-password
+  template:
+    containers:
+      - name: frontend
+        image: <ACR_NAME>.azurecr.io/fl-tfvars-form-image:latest
+        resources:
+          cpu: 0.5
+          memory: 1.0Gi
+        env:
+          - name: SECRET
+            secretRef: secret
+        ports:
+          - port: 80
+            protocol: TCP
+      - name: fl-ps-azure-func
+        image: <ACR_NAME>.azurecr.io/fl-ps-azure-func-image:latest
+        resources:
+          cpu: 0.5
+          memory: 1.0Gi
+        env:
+          - name: AzureWebJobsScriptRoot
+            value: /home/site/wwwroot
+          - name: AzureFunctionsJobHost__Logging__Console__IsEnabled
+            value: "true"
+          - name: SECRET
+            secretRef: secret
+          - name: GITHUB_URL
+            secretRef: github-url
+          - name: GITHUB_TOKEN
+            secretRef: github-token
