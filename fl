@@ -1,0 +1,50 @@
+# PowerShell script to move a computer to a specified OU and verify the move
+# Exits with 0 for success, 1 for failure
+
+param (
+    [Parameter(Mandatory=$true)]
+    [string]$DomainName,
+    [Parameter(Mandatory=$true)]
+    [string]$TargetOU,
+    [Parameter(Mandatory=$true)]
+    [string]$Username,
+    [Parameter(Mandatory=$true)]
+    [string]$Password
+)
+
+# Function to log messages
+function Write-Log {
+    param ([string]$Message)
+    Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'): $Message"
+}
+
+try {
+    Write-Log "Starting OU move process for computer to OU: $TargetOU in domain: $DomainName"
+
+    # Convert password to secure string
+    $SecurePassword = ConvertTo-SecureString $Password -AsPlainText -Force
+    $Credential = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
+
+    # Get the computer name
+    $ComputerName = $env:COMPUTERNAME
+
+    # Attempt to move the computer to the target OU
+    Write-Log "Attempting to move computer $ComputerName to OU..."
+    $Computer = Get-ADComputer -Identity $ComputerName -Credential $Credential -ErrorAction Stop
+    Move-ADObject -Identity $Computer.DistinguishedName -TargetPath $TargetOU -Credential $Credential -ErrorAction Stop
+
+    # Verify the OU move
+    Write-Log "Verifying OU move..."
+    $UpdatedComputer = Get-ADComputer -Identity $ComputerName -Credential $Credential -ErrorAction Stop
+    if ($UpdatedComputer.DistinguishedName -like "*$TargetOU") {
+        Write-Log "Successfully moved computer $ComputerName to OU: $TargetOU"
+        exit 0
+    } else {
+        Write-Log "Failed to verify OU move. Computer is not in the expected OU."
+        exit 1
+    }
+}
+catch {
+    Write-Log "Error occurred: $($_.Exception.Message)"
+    exit 1
+}
