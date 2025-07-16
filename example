@@ -1,19 +1,36 @@
-# Send POST request to GitHub
-try {
-    Write-Host "Sending GitHub API request to $githubWebhookUrl with SkipCertificateCheck"
-    $response = Invoke-RestMethod -Uri $githubWebhookUrl -Method Post -Headers @{
-        "Authorization" = "Bearer $githubToken"
-        "Content-Type" = "application/json"
-    } -Body $githubPayload -SkipCertificateCheck -ErrorAction Stop
+name: Move OU
 
-    if (-not $response) {
-        Write-Host "GitHub API returned no body, assuming success."
-        $response = @{"status"="GitHub Dispatch Success"}
-    }
+on:
+  workflow_dispatch:
+    inputs:
+      server_name:
+        description: 'Name of the server to move in AD'
+        required: true
+        type: string
 
-    Write-Host "GitHub Dispatch Response: $($response | ConvertTo-Json -Depth 10)"
-} catch {
-    Write-Host "Error calling GitHub API: $_"
-    Write-Host "Exception Details: $($_.Exception.Message)"
-    Write-Host "Stack Trace: $($_.Exception.StackTrace)"
-}
+jobs:
+  move-ou:
+    name: Move Server to OU
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Move-OU Script
+        shell: pwsh
+        run: |
+          .\Move-OU.ps1 `
+            -DomainName "${{ secrets.DOMAIN_NAME }}" `
+            -TargetOU "${{ secrets.TARGET_OU }}" `
+            -Username "${{ secrets.DOMAIN_USERNAME }}" `
+            -Password "${{ secrets.DOMAIN_PASSWORD }}"
+        env:
+          LOG_FILE_PATH: "${{ runner.temp }}\MoveOU_${{ github.run_id }}.log"
+
+      - name: Upload Move-OU Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: move-ou-log
+          path: ${{ runner.temp }}\MoveOU_*.log
