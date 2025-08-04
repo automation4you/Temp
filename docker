@@ -1,18 +1,11 @@
-# Base image
-FROM mcr.microsoft.com/azure-functions/powershell:4-powershell7.2
 
-# Environment variables
-ENV AzureWebJobsScriptRoot=/home/site/wwwroot \
-    AzureFunctionsJobHost__Logging__Console__IsEnabled=true
+just wanted to follow up from our conversation from Friday to bring a bit more clarity on the work I been doing developing the function app, the Function App isn’t meant to replace or compete with Backstage at all. It actually complements it really well, I built the web ui frontend for the tfvars file creation to showcase how this function app can serve as an automation hub for us, they could also build a similar form in backstage to capture this same data and send it to this same function app, it does not matter where the data comes from really.
 
-# Install ca-certificates for base certificate management
-RUN apt-get update && apt-get install -y ca-certificates
+Even though Backstage can communicate directly with GitHub, this Function App still has its place because it’s containerized and cloud-agnostic with no vendor lock-in so we can run it anywhere. It works by taking webhook payloads and formatting them into the proper syntax files that Terraform and pipelines use, it then sends a new formatted payload to GitHub Action for further processing like creating pull request ready for review/approval, this of course requires some coding on the function app to achieve based on the output we desire. 
 
-# Copy the internal root certificate
-COPY internal-root-ca.crt /usr/local/share/ca-certificates/
+This reduces human error from manual edits and is faster than having a GitHub action do the formatting. It can also send data to multiple endpoints at the same time, letting us do other tasks with any 3rd party platform like Jira, ServiceNow, monitoring tools, and more. Plus, it can respond back if needed, like posting to Jira or updating a ticket.
 
-# Update the certificate store
-RUN update-ca-certificates
+A big plus is it can handle data from any future product that can send webhooks to endpoints without needing to recode Backstage or update UIs or pipelines, this lets us integrate or use data from any new platform really fast. 
 
-# Copy function code
-COPY . /home/site/wwwroot
+I hope this helps clear it up on its intent, I feel it has its place and the Platform Team has already gotten some benefit from it.
+
