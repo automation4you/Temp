@@ -1,11 +1,262 @@
+name: "Deploy ACA"
+description: "Deploy an image in ACR to Azure Container App (ACA)"
+permissions:
+  id-token: write
+  contents: read
+inputs:
+  app_name:
+    description: "Name of app. Default is repo name"
+    required: false
+  image_version:
+    description: "Image version -- auto = YY.MM.DD.RUN_ID"
+    required: true
+    default: "auto"
+  namespace:
+    description: "Registry namespace -- ex. footlocker/customer"
+    required: true
+  registry:
+    description: "fqdn registry name"
+    required: true
+  deploy_env:
+    description: |
+      The three(3) character environment.
+      Examples: dev, tst, uat, stg, prd
+    required: true
+  az_tenant_id:
+    description: Azure Tenant ID
+    required: false
+    default: "3698556c-48eb-4511-8a0e-5fb6b7ebb01f"
+  az_subscription_id:
+    description: Azure Subscription ID
+    required: true
+  az_client_id:
+    description: Azure Tenant ID
+    required: true
+  region:
+    description: The Azure region
+    required: false
+    type: choice
+    options:
+      - "East US 2"
+      - "Central US"
+      - "West Europe"
+      - "North Europe"
+    default: "East US 2"
+  aca_resource_group:
+    description: The ACA resource group
+    required: true
+  cae_resource_group:
+    description: The CAE resource group
+    required: true  
+  cae_name:
+    description: The CAE name
+    required: true
+  managed_identity:
+    description: The managed identity
+    required: true
+  target_port:
+    description: The target port to expose
+    required: false
+  container_cpu:
+    description: |
+      The container cpu. Default: 0.25
+    required: false
+    default: 0.25
+  container_memory:
+    description: |
+      The container memory. Default: 0.5Gi
+    required: false
+    default: 0.5Gi
+  container_storage:
+    description: |
+      The container euphemoral storage size. Default: 0.5Gi
+    required: false
+    default: 0.5Gi
+  replica_min:
+    description: |
+      The minimum number of replicas, Default: 1
+    required: false
+    default: 1
+  replica_max:
+    description: |
+      The minimum number of replicas, Default: 10
+    required: false
+    default: 10
+  concurrent_scale:
+    description: |
+      The concurrency value to scale replicas
+    required: false
+    default: 25
+  key_vault:
+    description: The Azure key vault
+    required: false
+  environment_variables:
+    description: |
+      An array of objects to inject as Environment Variables to the container.
+      There are 2 schemas for each object (1) clear text and (2) key vault secret reference:
+        - {"name": <string>, "value": <string | number | boolean> }
+        - {"name": <string>, "secretRef": <string> }
+    default: "[]"
+  secrets_list:
+    description: |
+      An array of strings with secret key.
+      The secret key should follow format: {app_name}-{deploy_env}-{key}.
+      Key vault secrets can only use hyphen.
+    required: false
+    default: "[]"
+  volume_secrets:
+    description: |
+      An array of strings with secret key to store secrets as a file.
+      The secret key should follow format: {app_name}-{deploy_env}-{key}.
+      Key vault secrets can only use hyphen.
+    required: false
+    default: "[]"
+  secret_volume_mount_path:
+    description: |
+      The mount path for the secrets mount
+    required: false
+  share_mount_path:
+    description: |
+      The mount path for the Azure File Share
+    required: false
+  entrypoint_override:
+    description: |
+      The entrypoint override as an array.
+    required: false
+  runtime:
+    description: |
+      The application runtime
+    type: choice
+    required: true
+    options:
+      - dotnet
+      - java
+      - nodejs
+      - python
+  shell_command:
+    description: |
+      The shell command used in entrypoint
+    required: false
+    default: /bin/bash  
+  
+runs:
+  using: "composite"
+  steps:
+  - name: Checkout Source Code
+    uses: actions/checkout@v4
+  - name: Generate Yaml Specification
+    shell: bash
+    id: spec
+    working-directory: ${{ github.action_path }}
+    run: |
+      export SPEC_FILE=${{ github.workspace }}/app.yaml
+      export REPO_NAME=${{ github.repository }}
+      export APP_NAME=${{ inputs.app_name }}
+      if [[ -z $APP_NAME ]];then
+        APP_NAME=${REPO_NAME#*/}
+      fi
+      export RAW_APP_NAME=$APP_NAME
+      # APP_NAME Constraint: A name must consist of lower case alphanumeric characters or '-', start with a letter, end with an alphanumeric character, cannot have '--', and must be less than 32 characters.
+      APP_NAME=${APP_NAME:0:27}
+      export ACA_NAME=$APP_NAME-${{inputs.deploy_env}}
+      echo "aca_name=$ACA_NAME" >> "$GITHUB_OUTPUT"
 
-just wanted to follow up from our conversation from Friday to bring a bit more clarity on the work I been doing developing the function app, the Function App isn’t meant to replace or compete with Backstage at all. It actually complements it really well, I built the web ui frontend for the tfvars file creation to showcase how this function app can serve as an automation hub for us, they could also build a similar form in backstage to capture this same data and send it to this same function app, it does not matter where the data comes from really.
+      if [[ -z $SECRETS_LIST ]]; then
+        export SECRETS_LIST="[]"
+      fi
+      if [[ -z $ENV_JSON ]]; then
+        export ENV_JSON="[]"
+      fi
+      if [[ -z $VOLUME_SECRETS ]]; then
+        export VOLUME_SECRETS="[]"
+      fi
 
-Even though Backstage can communicate directly with GitHub, this Function App still has its place because it’s containerized and cloud-agnostic with no vendor lock-in so we can run it anywhere. It works by taking webhook payloads and formatting them into the proper syntax files that Terraform and pipelines use, it then sends a new formatted payload to GitHub Action for further processing like creating pull request ready for review/approval, this of course requires some coding on the function app to achieve based on the output we desire. 
+      # get the first set of characters before the hyphen
+      export REGION_CODE=${ACA_RESOURCE_GROUP%%-*}
 
-This reduces human error from manual edits and is faster than having a GitHub action do the formatting. It can also send data to multiple endpoints at the same time, letting us do other tasks with any 3rd party platform like Jira, ServiceNow, monitoring tools, and more. Plus, it can respond back if needed, like posting to Jira or updating a ticket.
+      # get the substring with the first group removed
+      export PT2=${ACA_RESOURCE_GROUP#*-}
+      export SYSTEM=${PT2%%-*}
+      export DOMAIN=${SYSTEM:0:3}
 
-A big plus is it can handle data from any future product that can send webhooks to endpoints without needing to recode Backstage or update UIs or pipelines, this lets us integrate or use data from any new platform really fast. 
+      export PT3=${PT2#*-}
+      export GENV=${PT3%%-*}
+      export NR_PREFIX=${REGION_CODE}-${DOMAIN}-${GENV}
+      echo "pulling $NR_PREFIX-newrelic-api-key"
 
-I hope this helps clear it up on its intent, I feel it has its place and the Platform Team has already gotten some benefit from it.
+      if [[ "$RUNTIME" == "node"* ]]; then
+        SPEC="nodejs"
+      else
+        SPEC="$RUNTIME"
+      fi
 
+      echo "Using $SPEC spec"
+
+      chmod +x ./scripts/$SPEC-generate-spec.sh
+      ./scripts/$SPEC-generate-spec.sh
+    env:
+      DEPLOY_ENV: ${{inputs.deploy_env}}
+      ACA_RESOURCE_GROUP: ${{ inputs.aca_resource_group }}
+      CAE_NAME: ${{ inputs.cae_name }}
+      CAE_RESOURCE_GROUP: ${{ inputs.cae_resource_group }}
+      CONCURRENCY_SCALE: ${{ inputs.concurrent_scale }}
+      CONTAINER_CPU: ${{ inputs.container_cpu }}
+      CONTAINER_MEM: ${{ inputs.container_memory }}
+      CONTAINER_STORAGE: ${{ inputs.container_storage }}
+      ENTRYPOINT: ${{ inputs.entrypoint_override }}
+      ENV_JSON: ${{ inputs.environment_variables }}
+      IMAGE_VERSION: ${{ inputs.image_version }}
+      KEY_VAULT: ${{ inputs.key_vault }}
+      MANAGED_IDENTITY: ${{ inputs.managed_identity }}
+      NAMESPACE: ${{ inputs.namespace }}
+      RUNTIME: ${{ inputs.runtime }}
+      REGION: ${{ inputs.region }}
+      REGISTRY: ${{ inputs.registry }}
+      REPLICA_MAX: ${{ inputs.replica_max }}
+      REPLICA_MIN: ${{ inputs.replica_min }}
+      SECRETS_LIST: ${{ inputs.secrets_list }}
+      SHARE_MOUNT_PATH: ${{ inputs.share_mount_path }}
+      SUBSCRIPTION_ID: ${{ inputs.az_subscription_id }}
+      TARGET_PORT: ${{ inputs.target_port }}
+      VOLUME_MOUNT_PATH: ${{ inputs.secret_volume_mount_path }}
+      VOLUME_SECRETS: ${{ inputs.volume_secrets }}
+      SHELL_COMMAND: ${{ inputs.shell_command }}
+  - name: 'AZ CLI login'
+    uses: azure/login@v2
+    with:
+      client-id: ${{ inputs.az_client_id }}
+      tenant-id: ${{ inputs.az_tenant_id }}
+      subscription-id: ${{ inputs.az_subscription_id }}
+  - name: "Deploy ACA"
+    id: deployment
+    shell: bash
+    run: |
+      az version
+      az extension add --name containerapp --allow-preview true
+      export SPEC_FILE=${{ github.workspace }}/app.yaml
+      export REPO_NAME=${{ github.repository }}
+      export ACA_NAME=${{ steps.spec.outputs.aca_name }}
+      
+      if [ $RUNTIME == "java" ]; then
+        RESULT=$(az containerapp create -n $ACA_NAME -g $RESOURCE_GROUP --yaml $SPEC_FILE --enable-java-agent --query "{fqdn:properties.configuration.ingress.fqdn, latestRevisionFqdn:properties.latestRevisionFqdn}")
+      else
+        RESULT=$(az containerapp create -n $ACA_NAME -g $RESOURCE_GROUP --yaml $SPEC_FILE --query "{fqdn:properties.configuration.ingress.fqdn, latestRevisionFqdn:properties.latestRevisionFqdn}")
+      fi
+      
+      echo "fqdn=$(echo $RESULT | jq '.fqdn')" >> "$GITHUB_OUTPUT"  
+      echo "latestRevisionFqdn=$(echo $RESULT | jq '.latestRevisionFqdn')" >> "$GITHUB_OUTPUT"
+      echo "<<< END: ACA Deployment with $APP_NAME Successful"
+    env:
+      RESOURCE_GROUP: ${{ inputs.aca_resource_group }}
+      ENV_REGION: ${{ inputs.environment }}
+      RUNTIME: ${{ inputs.runtime }}
+  - name: Summarize
+    shell: bash
+    run: |
+      {
+        echo "### Output"
+        echo "| Variable   | Value       |"
+        echo "| ---------- | ----------- |"
+        echo "| fqdn | https://${{ steps.deployment.outputs.fqdn }} |"
+        echo "| latestRevision  | https://${{ steps.deployment.outputs.latestRevisionFqdn }} |"        
+      } >> $GITHUB_STEP_SUMMARY 
