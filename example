@@ -1,36 +1,8 @@
-name: Move OU
+Hi [PM’s Name],
 
-on:
-  workflow_dispatch:
-    inputs:
-      server_name:
-        description: 'Name of the server to move in AD'
-        required: true
-        type: string
+Just keeping you updated on the ACA migration. I’m currently leading GitHub pipelines and containerization and am committed to learning and helping. However, given the limited time and my current familiarity with the app side, especially since I’m rebuilding from source with little app team input, I believe it would be more effective for me to support the team rather than lead this effort.
 
-jobs:
-  move-ou:
-    name: Move Server to OU
-    runs-on: windows-latest
+Some details around app scope and deadline expectations are still unclear to me. Any clarity you can provide would help me stay aligned and contribute effectively.
 
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Run Move-OU Script
-        shell: pwsh
-        run: |
-          .\Move-OU.ps1 `
-            -DomainName "${{ secrets.DOMAIN_NAME }}" `
-            -TargetOU "${{ secrets.TARGET_OU }}" `
-            -Username "${{ secrets.DOMAIN_USERNAME }}" `
-            -Password "${{ secrets.DOMAIN_PASSWORD }}"
-        env:
-          LOG_FILE_PATH: "${{ runner.temp }}\MoveOU_${{ github.run_id }}.log"
-
-      - name: Upload Move-OU Log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: move-ou-log
-          path: ${{ runner.temp }}\MoveOU_*.log
+Thanks,
+[Your Name]
