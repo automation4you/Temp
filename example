@@ -1,12 +1,1 @@
-Subject: ACA Migration Role & Timeline
-
-Hi [Manager],
-
-I wanted to check in about the ACA migration. My strongest contribution right now is leading the GitHub pipelines, and I can also support general automation tasks.
-
-That said, I joined the project very late, and the timeline is tight. Rebuilding the apps from source without much app team input is complex, and taking full ownership of that part under these conditions could create real risks for the schedule or deliverables. I’m still ramping up on those skills and want to make sure expectations are realistic.
-
-I just wanted to make sure we’re aligned on how I can best help the team succeed while mitigating any risk.
-
-Thanks,
-[Your Name]
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGwvinUltWWgCv7vRyeMCO3f3x536ngUfr0OINOLDhhE p-github-key
