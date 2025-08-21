@@ -1,1 +1,9 @@
-no
+Hey [Architect], I wanted to circle back on the Dockerfile discussion.
+
+App teams already build and publish their own container images, and industry best practice is that they own that part (Dockerfile, dependencies, runtime correctness). If we start rebuilding those images ourselves, we would be duplicating effort, taking on app-specific debugging (keystores, configs, etc.), and spending cycles on issues the app teams are best positioned to resolve. That adds risk without creating deployment value.
+
+Our responsibility is making sure those images run reliably in ACA by handling CI/CD, secrets, and runtime args. Keeping that focus lets us deliver faster and stay in our lane.
+
+As a middle ground, I can put together a lightweight questionnaire or template (base image, ports, env vars, healthcheck, etc.). Teams could fill that out and commit it with their repo, and our pipeline could scaffold or validate the Dockerfile. If something breaks, it still stays with the app team to fix.
+
+That way we support the consistency you are aiming for while avoiding us rebuilding and debugging every app’s logic.
